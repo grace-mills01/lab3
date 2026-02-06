@@ -4,7 +4,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
-import functions
+import plots
 
 sys.setrecursionlimit(10**9)
 
