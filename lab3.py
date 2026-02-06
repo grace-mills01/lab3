@@ -61,6 +61,7 @@ def has_dup(ll : LinkedList) -> bool:
     return False
 
 # Returns a new list in which "new_num" is inserted in the propery spot to maintain the order in a non-empty list "arr"
+# Helper function for insertion_sort
 def insert(arr : LinkedList, new_num : int) -> LinkedList:
     match arr:
         case None:
