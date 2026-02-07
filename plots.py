@@ -18,12 +18,12 @@ from typing import Callable, List, Tuple
 
 
 # -----------------------------
-# Timing helpers (lab-required behavior)
+# Timing helpers
 # -----------------------------
 
 
+# average seconds for a given call
 def avg_seconds(run_once: Callable[[], None], trials: int = 4) -> float:
-    """Average runtime over `trials` calls (lab says 4)."""
     total = 0.0
     for _ in range(trials):
         start = time.perf_counter()
@@ -33,8 +33,8 @@ def avg_seconds(run_once: Callable[[], None], trials: int = 4) -> float:
     return total / trials
 
 
+# collects points
 def evenly_sampled_ns(n_max: int, points: int = 15) -> List[int]:
-    """15 data points evenly sampling [1, n_max], inclusive."""
     if n_max <= 1:
         return [1] * points
 
@@ -53,6 +53,7 @@ def evenly_sampled_ns(n_max: int, points: int = 15) -> List[int]:
     return ns
 
 
+# choosing n_max value for graphing
 def choose_n_max(
     make_worst_case_call: Callable[[int], Callable[[], None]],
     low: float = 1.5,
@@ -60,10 +61,6 @@ def choose_n_max(
     start_n: int = 1,
     max_n: int = 5_000_000,
 ) -> int:
-    """
-    Find n_max so ONE worst-case call takes ~1.5–3 seconds.
-    Uses exponential growth for speed.
-    """
     n = max(1, start_n)
     last = n
 
@@ -92,26 +89,26 @@ def choose_n_max(
 # -----------------------------
 
 
+# "no real worst case; all cases are the same"
 def wc_range(n: int) -> Callable[[], None]:
-    # "no real worst case; all cases are the same"
     return lambda: range_fn(n)
 
 
+# worst case: target at end OR not present
 def wc_occurs(n: int) -> Callable[[], None]:
-    # worst case: target at end OR not present
     data = list(range(n))
     target = -1  # not present
     return lambda: occurs(data, target)
 
 
+# worst case: no duplicates
 def wc_has_dup(n: int) -> Callable[[], None]:
-    # worst case: no duplicates
     data = list(range(n))
     return lambda: has_dup(data)
 
 
+# typical worst case: reverse-sorted list (max shifting)
 def wc_insertion_sort(n: int) -> Callable[[], None]:
-    # typical worst case: reverse-sorted list (max shifting)
     data = list(range(n, 0, -1))
     return lambda: insertion_sort(data.copy())
 
@@ -121,6 +118,7 @@ def wc_insertion_sort(n: int) -> Callable[[], None]:
 # -----------------------------
 
 
+# build data to plot
 def build_series(
     make_wc: Callable[[int], Callable[[], None]],
 ) -> Tuple[List[int], List[float], int]:
@@ -130,6 +128,7 @@ def build_series(
     return ns, ys, n_max
 
 
+# general plot function
 def plot_one(
     title: str, make_wc: Callable[[int], Callable[[], None]], filename: str
 ) -> None:
