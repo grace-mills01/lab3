@@ -6,33 +6,152 @@ import numpy as np
 import sys
 import plots
 
+from lab3 import range as range_fn
+from lab3 import occurs
+from lab3 import has_dup
+from lab3 import insertion_sort
+
 sys.setrecursionlimit(10**9)
 
-
-# This is for reference; you can get rid of this function if you want.
-def example_graph_creation() -> None:
-    # Return log-base-2 of 'x' + 5.
-    def f_to_graph(x: float) -> float:
-        return math.log2(x) + 5.0
+import time
+from typing import Callable, List, Tuple
 
 
-    # here we're using "list comprehensions": more of Python's
-    # syntax sugar.
-    x_coords: List[float] = [float(i) for i in range(1, 100)]
-    y_coords: List[float] = [f_to_graph(x) for x in x_coords]
-    # Could have just used this type from the start, but I want
-    # to emphasize that 'matplotlib' uses 'numpy''s specific array
-    # type, which is different from the built-in Python array
-    # type.
-    x_numpy: np.ndarray = np.array(x_coords)
-    y_numpy: np.ndarray = np.array(y_coords)
-    plt.plot(x_numpy, y_numpy, label="log_2(x)")
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.title("Example Graph")
+# -----------------------------
+# Timing helpers (lab-required behavior)
+# -----------------------------
+
+
+def avg_seconds(run_once: Callable[[], None], trials: int = 4) -> float:
+    """Average runtime over `trials` calls (lab says 4)."""
+    total = 0.0
+    for _ in range(trials):
+        start = time.perf_counter()
+        run_once()
+        end = time.perf_counter()
+        total += end - start
+    return total / trials
+
+
+def evenly_sampled_ns(n_max: int, points: int = 15) -> List[int]:
+    """15 data points evenly sampling [1, n_max], inclusive."""
+    if n_max <= 1:
+        return [1] * points
+
+    ns: List[int] = []
+    for i in range(points):
+        t = i / (points - 1)
+        n = int(round(1 + t * (n_max - 1)))
+        ns.append(n)
+
+    # remove duplicates caused by rounding, but keep endpoints
+    ns = sorted(set(ns))
+    if ns[0] != 1:
+        ns.insert(0, 1)
+    if ns[-1] != n_max:
+        ns.append(n_max)
+    return ns
+
+
+def choose_n_max(
+    make_worst_case_call: Callable[[int], Callable[[], None]],
+    low: float = 1.5,
+    high: float = 3.0,
+    start_n: int = 1,
+    max_n: int = 5_000_000,
+) -> int:
+    """
+    Find n_max so ONE worst-case call takes ~1.5–3 seconds.
+    Uses exponential growth for speed.
+    """
+    n = max(1, start_n)
+    last = n
+
+    while n <= max_n:
+        f = make_worst_case_call(n)
+
+        start = time.perf_counter()
+        f()
+        elapsed = time.perf_counter() - start
+
+        if low <= elapsed <= high:
+            return n
+
+        if elapsed < low:
+            last = n
+            n *= 2
+        else:
+            # already slower than desired window
+            return n
+
+    return last
+
+
+# -----------------------------
+# Worst-case input builders (based on your write-up)
+# -----------------------------
+
+
+def wc_range(n: int) -> Callable[[], None]:
+    # "no real worst case; all cases are the same"
+    return lambda: range_fn(n)
+
+
+def wc_occurs(n: int) -> Callable[[], None]:
+    # worst case: target at end OR not present
+    data = list(range(n))
+    target = -1  # not present
+    return lambda: occurs(data, target)
+
+
+def wc_has_dup(n: int) -> Callable[[], None]:
+    # worst case: no duplicates
+    data = list(range(n))
+    return lambda: has_dup(data)
+
+
+def wc_insertion_sort(n: int) -> Callable[[], None]:
+    # typical worst case: reverse-sorted list (max shifting)
+    data = list(range(n, 0, -1))
+    return lambda: insertion_sort(data.copy())
+
+
+# -----------------------------
+# Plotting
+# -----------------------------
+
+
+def build_series(
+    make_wc: Callable[[int], Callable[[], None]],
+) -> Tuple[List[int], List[float], int]:
+    n_max = choose_n_max(make_wc)
+    ns = evenly_sampled_ns(n_max, points=15)
+    ys = [avg_seconds(make_wc(n), trials=4) for n in ns]
+    return ns, ys, n_max
+
+
+def plot_one(
+    title: str, make_wc: Callable[[int], Callable[[], None]], filename: str
+) -> None:
+    ns, ys, n_max = build_series(make_wc)
+
+    plt.figure()
+    plt.plot(ns, ys, marker="o")
+    plt.xlabel("N")
+    plt.ylabel("Seconds (worst case, avg of 4 runs)")
+    plt.title(f"{title} worst-case runtime (n_max={n_max})")
     plt.grid(True)
-    plt.legend()  # makes the 'label's show up
+    plt.tight_layout()
+    plt.savefig(filename, dpi=200)
     plt.show()
 
+
+def main() -> None:
+    plot_one("Range", wc_range, "range_worst_case.png")
+    plot_one("Occurs", wc_occurs, "occurs_worst_case.png")
+    plot_one("Has_dup", wc_has_dup, "has_dup_worst_case.png")
+    plot_one("Insertion_sort", wc_insertion_sort, "insertion_sort_worst_case.png")
+
+
 if __name__ == "__main__":
-    example_graph_creation()
+    main()
